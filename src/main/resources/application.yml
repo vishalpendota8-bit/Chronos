@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: chronos
+
+  datasource:
+    # 5433 matches the host port published by docker-compose.yml (see the note there).
+    url: ${CHRONOS_DB_URL:jdbc:postgresql://localhost:5433/chronos}
+    username: ${CHRONOS_DB_USER:chronos}
+    password: ${CHRONOS_DB_PASSWORD:chronos}
+    hikari:
+      # The poller claims a batch on one connection while dispatch threads write results on
+      # others, so the pool must comfortably exceed the dispatch pool size (tuned in M4).
+      maximum-pool-size: 20
+      pool-name: chronos-pool
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Hibernate only validates that entities match it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  threads:
+    virtual:
+      enabled: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+logging:
+  level:
+    com.chronos: DEBUG
+
+chronos:
+  # Defaults applied to new jobs when the caller does not specify them (used from M3 on).
+  defaults:
+    timezone: UTC
+    max-attempts: 3
+    initial-backoff-sec: 10
+    backoff-multiplier: 2.0
+    timeout-sec: 30
+  retry:
+    # Backoff is capped so a long-broken endpoint retries hourly instead of drifting to days.
+    max-backoff-sec: 3600
+    jitter-ratio: 0.20

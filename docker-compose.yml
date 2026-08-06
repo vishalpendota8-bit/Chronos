@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chronos-postgres
+    environment:
+      POSTGRES_DB: chronos
+      POSTGRES_USER: chronos
+      POSTGRES_PASSWORD: chronos
+    ports:
+      # Host 5433 on purpose: a locally installed Postgres commonly already owns 5432, and the
+      # clash surfaces as a confusing "password authentication failed" rather than a bind error.
+      - "5433:5432"
+    volumes:
+      - chronos-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos -d chronos"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  chronos-pgdata:
