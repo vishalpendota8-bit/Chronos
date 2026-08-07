@@ -41,6 +41,24 @@ logging:
     com.chronos: DEBUG
 
 chronos:
+  jwt:
+    # HS256 needs >= 256 bits of key material. The dev default below is deliberately long and
+    # obviously fake; production MUST set CHRONOS_JWT_SECRET (JwtProperties refuses to start
+    # with the dev default unless the `dev` profile is active).
+    secret: ${CHRONOS_JWT_SECRET:dev-only-insecure-secret-change-me-0123456789abcdef}
+    issuer: chronos
+    # 1 hour. Tradeoff: no refresh token in M2, so a user re-logs in hourly; that keeps the
+    # threat model small (no server-side token store, nothing to revoke) at the cost of UX.
+    expiry: 1h
+
+  security:
+    # Optional first-admin bootstrap: on startup, if this email is set and no such user exists,
+    # an ADMIN is created. Leave the email blank to disable. Without it there is no way to get
+    # a first ADMIN, since /auth/register always creates a USER.
+    bootstrap-admin:
+      email: ${CHRONOS_ADMIN_EMAIL:}
+      password: ${CHRONOS_ADMIN_PASSWORD:}
+
   # Defaults applied to new jobs when the caller does not specify them (used from M3 on).
   defaults:
     timezone: UTC
