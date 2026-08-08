@@ -13,6 +13,9 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 
     Page<Job> findByStatusNot(JobStatus status, Pageable pageable);
 
+    /** Used by ?includeArchived=true — the only listing that shows soft-deleted jobs. */
+    Page<Job> findByOwnerId(Long ownerId, Pageable pageable);
+
     /**
      * Ownership-scoped lookup. Callers use this instead of findById so a user can never read
      * another user's job by guessing an id.
@@ -20,6 +23,9 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     Optional<Job> findByIdAndOwnerId(Long id, Long ownerId);
 
     boolean existsByOwnerIdAndNameIgnoreCase(Long ownerId, String name);
+
+    /** Rename check: the same name on a *different* job means a collision. */
+    boolean existsByOwnerIdAndNameIgnoreCaseAndIdNot(Long ownerId, String name, Long id);
 
     List<Job> findByStatus(JobStatus status);
 }

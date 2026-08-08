@@ -59,13 +59,21 @@ chronos:
       email: ${CHRONOS_ADMIN_EMAIL:}
       password: ${CHRONOS_ADMIN_PASSWORD:}
 
-  # Defaults applied to new jobs when the caller does not specify them (used from M3 on).
+  # Defaults applied to new jobs when the caller does not specify them.
   defaults:
     timezone: UTC
     max-attempts: 3
     initial-backoff-sec: 10
     backoff-multiplier: 2.0
     timeout-sec: 30
+
+  jobs:
+    # SSRF guard. Ships DISABLED because the obvious way to try Chronos out — and the way M7's
+    # compose demo works — is to point a job at a service on localhost or another container.
+    # Turn this on for any deployment where users are not all trusted.
+    block-private-targets: ${CHRONOS_BLOCK_PRIVATE_TARGETS:false}
+    max-headers: 20
+    max-payload-bytes: 65536
   retry:
     # Backoff is capped so a long-broken endpoint retries hourly instead of drifting to days.
     max-backoff-sec: 3600
