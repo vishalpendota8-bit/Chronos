@@ -55,6 +55,24 @@ public class ExecutionCompletionService {
             return;
         }
 
+        /*
+         * Only a RUNNING row may be completed. Added in M6, and it is the reaper that makes it
+         * necessary: once a stuck execution can be failed by a sweep, a dispatch thread that was
+         * merely slow rather than dead can come back afterwards holding a result for a row that
+         * has already been reaped, retried, or dead-lettered. Writing that result would resurrect
+         * a finished row — flipping a DEAD execution to SUCCEEDED while its dead letter still
+         * sits in the queue, or clearing a FAILED whose retry is already scheduled.
+         *
+         * First writer wins, and the reaper is by definition the first. The late answer is
+         * logged and dropped: it is genuinely stale, and its work has already been accounted for.
+         */
+        if (execution.getStatus() != ExecutionStatus.RUNNING) {
+            log.warn("Discarding late outcome for execution {}: it is already {} "
+                            + "(most likely reaped while the dispatch was still in flight)",
+                    executionId, execution.getStatus());
+            return;
+        }
+
         execution.setFinishedAt(Instant.now());
         execution.setResponseCode(outcome.responseCode());
         execution.setResponseSnippet(outcome.snippet());

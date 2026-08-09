@@ -82,6 +82,11 @@ public class Job {
     @Column(nullable = false, length = 16)
     private JobStatus status;
 
+    /** What happens to an occurrence discovered late. See {@link MisfirePolicy}. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "misfire_policy", nullable = false, length = 16)
+    private MisfirePolicy misfirePolicy;
+
     @Column(name = "max_attempts", nullable = false)
     private int maxAttempts;
 

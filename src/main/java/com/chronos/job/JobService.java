@@ -121,6 +121,7 @@ public class JobService {
                 .initialBackoffSec(orDefault(request.initialBackoffSec(), defaults.initialBackoffSec()))
                 .backoffMultiplier(orDefault(request.backoffMultiplier(), defaults.backoffMultiplier()))
                 .timeoutSec(orDefault(request.timeoutSec(), defaults.timeoutSec()))
+                .misfirePolicy(orDefault(request.misfirePolicy(), defaults.misfirePolicy()))
                 // A new job is ENABLED, so it gets a schedule immediately.
                 .nextRunAt(nextRunOrNull(request.cronExpr().trim(), timezone))
                 .build();
@@ -175,6 +176,7 @@ public class JobService {
         job.setInitialBackoffSec(orDefault(request.initialBackoffSec(), defaults.initialBackoffSec()));
         job.setBackoffMultiplier(orDefault(request.backoffMultiplier(), defaults.backoffMultiplier()));
         job.setTimeoutSec(orDefault(request.timeoutSec(), defaults.timeoutSec()));
+        job.setMisfirePolicy(orDefault(request.misfirePolicy(), defaults.misfirePolicy()));
 
         if (scheduleChanged && job.getStatus() == JobStatus.ENABLED) {
             job.setNextRunAt(nextRunOrNull(cronExpr, timezone));
@@ -221,9 +223,11 @@ public class JobService {
     /**
      * Suspends the schedule. Idempotent, so a double-clicked button is harmless.
      *
-     * <p><b>Note for M4:</b> pausing clears {@code nextRunAt}, which stops <em>new</em>
-     * occurrences from being enqueued. Executions already queued or mid-retry are not cancelled
-     * here — cancelling in-flight work is M6's concern.
+     * <p>Pausing clears {@code nextRunAt}, which stops <em>new</em> occurrences from being
+     * enqueued. Executions already queued or mid-retry are deliberately <em>not</em> cancelled:
+     * an attempt that is already in flight may have reached the target, and there is no way to
+     * un-send an HTTP request. Pause governs the schedule, not work already handed to the
+     * engine; the in-flight attempts drain within one retry cycle and nothing follows them.
      */
     @Transactional
     public JobResponse pause(Long id, ChronosUserDetails caller) {
@@ -243,8 +247,14 @@ public class JobService {
      *
      * <p>The next run is computed from <em>now</em>, not from where the schedule was when it was
      * paused. A job paused over a weekend therefore does not fire a burst of catch-up runs on
-     * resume; it simply rejoins its schedule. That "skip what was missed" choice is the misfire
-     * policy, and M6 makes it configurable.
+     * resume; it simply rejoins its schedule.
+     *
+     * <p><b>Note this is not the misfire policy, and deliberately does not consult it.</b>
+     * {@link MisfirePolicy} answers "what should happen to a run we missed by accident" — the
+     * cluster was down, or the previous run overran. A pause is not an accident: an operator
+     * said stop. Honouring FIRE_NOW here would mean every resume fired an immediate extra run,
+     * which is not what a resume button means. Pausing always skips what was missed; only
+     * unintended lateness is negotiable.
      */
     @Transactional
     public JobResponse resume(Long id, ChronosUserDetails caller) {

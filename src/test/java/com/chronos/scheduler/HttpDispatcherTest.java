@@ -75,7 +75,9 @@ class HttpDispatcherTest {
 
     private static SchedulerProperties properties(int snippetLimit) {
         return new SchedulerProperties(false, 5000, 5000, 50, 100, 2, snippetLimit,
-                new SchedulerProperties.Dispatch(2, 4, 10));
+                300, 35,
+                new SchedulerProperties.Dispatch(2, 4, 10),
+                new SchedulerProperties.Reap(30_000, 30, 50));
     }
 
     private void respond(HttpExchange exchange, int status, String body) throws IOException {

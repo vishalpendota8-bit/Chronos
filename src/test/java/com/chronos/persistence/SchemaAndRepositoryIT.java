@@ -89,6 +89,7 @@ class SchemaAndRepositoryIT extends PostgresTestBase {
                 .initialBackoffSec(10)
                 .backoffMultiplier(new BigDecimal("2.00"))
                 .timeoutSec(30)
+                .misfirePolicy(com.chronos.job.MisfirePolicy.FIRE_NOW)
                 .build();
     }
 

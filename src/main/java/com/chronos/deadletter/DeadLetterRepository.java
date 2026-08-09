@@ -29,4 +29,17 @@ public interface DeadLetterRepository extends JpaRepository<DeadLetter, Long> {
     Page<DeadLetter> findAllByOrderByFailedAtDesc(Pageable pageable);
 
     Optional<DeadLetter> findByExecutionId(Long executionId);
+
+    // ------------------------------------------------------------------ stats (M6)
+
+    /*
+     * "Pending" means not yet replayed — the number an operator should act on. These are counts,
+     * so no @EntityGraph: COUNT never touches the lazy associations.
+     */
+
+    long countByReplayedAtIsNull();
+
+    long countByJobOwnerIdAndReplayedAtIsNull(Long ownerId);
+
+    long countByJobIdAndReplayedAtIsNull(Long jobId);
 }

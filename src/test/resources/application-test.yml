@@ -10,9 +10,18 @@ spring:
 
 chronos:
   scheduler:
-    # The @Scheduled timers are off in tests. Integration tests call the enqueuer and poller
-    # directly so each step is observable, instead of racing a 5-second background tick.
+    # The @Scheduled timers are off in tests. Integration tests call the enqueuer, poller and
+    # reaper directly so each step is observable, instead of racing a 5-second background tick.
     enabled: false
+    # ShutdownIT deliberately leaves a dispatch "in flight" that never completes, so the drain
+    # wait is the test's runtime. One second is long enough to prove the wait happens.
+    shutdown-drain-sec: 1
+    reap:
+      # No grace period in tests, so the reaper's cutoff is exactly the job's own timeout-sec.
+      # A fixture with timeout-sec 1 is then reapable a second after it started rather than 31,
+      # which is the difference between a fast test and one nobody runs. Only this key is
+      # overridden; interval-ms and batch-size still come from application.yml.
+      grace-sec: 0
 
 logging:
   level:

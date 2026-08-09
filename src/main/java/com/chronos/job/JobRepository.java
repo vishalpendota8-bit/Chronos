@@ -3,6 +3,8 @@ package com.chronos.job;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -40,4 +42,31 @@ public interface JobRepository extends JpaRepository<Job, Long> {
      */
     List<Job> findByStatusAndNextRunAtLessThanEqualOrderByNextRunAtAsc(
             JobStatus status, Instant cutoff, Pageable pageable);
+
+    // ------------------------------------------------------------------ stats (M6)
+
+    /** See {@link com.chronos.execution.JobExecutionRepository#countByStatusSince} for the why. */
+    @Query("SELECT new com.chronos.job.JobStatusCount(j.status, COUNT(j)) FROM Job j GROUP BY j.status")
+    List<JobStatusCount> countByStatus();
+
+    @Query("""
+            SELECT new com.chronos.job.JobStatusCount(j.status, COUNT(j))
+              FROM Job j
+             WHERE j.owner.id = :ownerId
+             GROUP BY j.status
+            """)
+    List<JobStatusCount> countByStatusForOwner(@Param("ownerId") Long ownerId);
+
+    /**
+     * The soonest upcoming occurrence across the visible jobs — "when does anything happen next".
+     *
+     * <p>{@code MIN} over an empty set is null, which is the correct answer for an account with
+     * no enabled jobs, so the return type is boxed.
+     */
+    @Query("SELECT MIN(j.nextRunAt) FROM Job j WHERE j.status = :status")
+    Instant findEarliestNextRun(@Param("status") JobStatus status);
+
+    @Query("SELECT MIN(j.nextRunAt) FROM Job j WHERE j.status = :status AND j.owner.id = :ownerId")
+    Instant findEarliestNextRunForOwner(@Param("status") JobStatus status,
+                                        @Param("ownerId") Long ownerId);
 }

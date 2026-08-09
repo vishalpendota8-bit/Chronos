@@ -38,12 +38,14 @@ public class ExecutionEnqueuer {
     private final JobRepository jobs;
     private final JobOccurrenceEnqueuer occurrenceEnqueuer;
     private final SchedulerProperties properties;
+    private final InFlightRegistry registry;
 
     public ExecutionEnqueuer(JobRepository jobs, JobOccurrenceEnqueuer occurrenceEnqueuer,
-                             SchedulerProperties properties) {
+                             SchedulerProperties properties, InFlightRegistry registry) {
         this.jobs = jobs;
         this.occurrenceEnqueuer = occurrenceEnqueuer;
         this.properties = properties;
+        this.registry = registry;
     }
 
     /**
@@ -52,6 +54,13 @@ public class ExecutionEnqueuer {
      * @return how many executions were created — used by tests and logging.
      */
     public int enqueueDueJobs() {
+        // A shutting-down node stops sweeping too. Not for safety — an enqueued row is claimable
+        // by any node, so nothing would be stranded — but because advancing next_run_at on the
+        // way out is pointless work against a database the node is about to disconnect from.
+        if (!registry.isAccepting()) {
+            return 0;
+        }
+
         List<Job> due = jobs.findByStatusAndNextRunAtLessThanEqualOrderByNextRunAtAsc(
                 JobStatus.ENABLED, Instant.now(),
                 PageRequest.of(0, properties.enqueueBatchSize()));

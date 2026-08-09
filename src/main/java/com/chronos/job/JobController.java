@@ -1,6 +1,7 @@
 package com.chronos.job;
 
 import com.chronos.common.PageResponse;
+import com.chronos.execution.dto.ExecutionResponse;
 import com.chronos.job.dto.CronPreviewRequest;
 import com.chronos.job.dto.CronPreviewResponse;
 import com.chronos.job.dto.JobRequest;
@@ -37,9 +38,11 @@ import java.net.URI;
 public class JobController {
 
     private final JobService jobService;
+    private final JobTriggerService triggerService;
 
-    public JobController(JobService jobService) {
+    public JobController(JobService jobService, JobTriggerService triggerService) {
         this.jobService = jobService;
+        this.triggerService = triggerService;
     }
 
     /** USERs see their own jobs; ADMINs see everyone's. */
@@ -92,6 +95,23 @@ public class JobController {
     public JobResponse resume(@PathVariable Long id,
                               @AuthenticationPrincipal ChronosUserDetails caller) {
         return jobService.resume(id, caller);
+    }
+
+    /**
+     * Runs the job once, right now, without disturbing its schedule.
+     *
+     * <p>202 rather than 200: the execution is <em>queued</em>, and the response describes a row
+     * the poller has not picked up yet. Returning 200 would imply the job had run, which it has
+     * not — the caller polls {@code GET /executions/{id}} to find out how it went.
+     */
+    @PostMapping("/{id}/trigger")
+    public ResponseEntity<ExecutionResponse> trigger(
+            @PathVariable Long id,
+            @AuthenticationPrincipal ChronosUserDetails caller) {
+        ExecutionResponse queued = triggerService.trigger(id, caller);
+        return ResponseEntity.accepted()
+                .location(URI.create("/executions/" + queued.id()))
+                .body(queued);
     }
 
     /**

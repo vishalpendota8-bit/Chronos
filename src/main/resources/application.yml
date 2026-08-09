@@ -34,10 +34,10 @@ spring:
 
   task:
     scheduling:
-      # Two @Scheduled loops (enqueue and poll). The default pool of 1 would make them take
+      # Three @Scheduled loops (enqueue, poll, reap). The default pool of 1 would make them take
       # turns, so a slow enqueue tick would delay claiming due work.
       pool:
-        size: 2
+        size: 3
 
 server:
   port: ${SERVER_PORT:8080}
@@ -73,6 +73,9 @@ chronos:
     initial-backoff-sec: 10
     backoff-multiplier: 2.0
     timeout-sec: 30
+    # FIRE_NOW keeps the pre-M6 behaviour, so existing jobs are unaffected by the upgrade.
+    # SKIP is the other option — see MisfirePolicy.
+    misfire-policy: FIRE_NOW
 
   scheduler:
     # Turned off in tests so they can step the engine manually.
@@ -85,12 +88,30 @@ chronos:
     enqueue-batch-size: 100
     connect-timeout-sec: 10
     response-snippet-limit: 1000
+    # An occurrence more than 5 minutes late is a misfire, and the job's misfire-policy decides
+    # what to do about it. Well above enqueue-interval-ms (5s) so ordinary sweep latency, or a
+    # brief restart, is never mistaken for one.
+    misfire-threshold-sec: 300
+    # How long a shutting-down node waits for its in-flight dispatches before handing them back
+    # to the queue. 35s covers the maximum timeout-sec (30) plus a little; below the longest
+    # timeout, a node that stops during a slow call always hands that call's row to a peer, and
+    # the target may see the request twice. See SchedulerLifecycle.
+    shutdown-drain-sec: 35
     dispatch:
       # 16 concurrent outbound calls per node. Keep max-pool-size well under the Hikari pool
       # (20) — every finishing dispatch needs a connection to write its result back.
       core-pool-size: 8
       max-pool-size: 16
       queue-capacity: 100
+    reap:
+      # Every 30s. A stranded row is already past its timeout, so finding it sooner buys nothing.
+      interval-ms: 30000
+      # Added to each job's own timeout-sec before a RUNNING row is declared abandoned. Covers
+      # the gap between the HTTP client giving up and the result being written — a GC pause, a
+      # slow commit, a saturated dispatch pool. Too small and the reaper starts retrying calls
+      # that were merely slow; too large and a crashed node's work waits that much longer.
+      grace-sec: 30
+      batch-size: 50
 
   jobs:
     # SSRF guard. Ships DISABLED because the obvious way to try Chronos out — and the way M7's

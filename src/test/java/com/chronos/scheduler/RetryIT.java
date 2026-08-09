@@ -12,6 +12,7 @@ import com.chronos.job.HttpMethodType;
 import com.chronos.job.Job;
 import com.chronos.job.JobRepository;
 import com.chronos.job.JobStatus;
+import com.chronos.job.MisfirePolicy;
 import com.chronos.support.PostgresTestBase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -167,6 +168,7 @@ class RetryIT extends PostgresTestBase {
                 // covered exhaustively in BackoffCalculatorTest.
                 .backoffMultiplier(new BigDecimal("1.00"))
                 .timeoutSec(10)
+                .misfirePolicy(MisfirePolicy.FIRE_NOW)
                 .build());
     }
 

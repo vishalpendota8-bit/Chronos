@@ -1,5 +1,6 @@
 package com.chronos.config;
 
+import com.chronos.job.MisfirePolicy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.math.BigDecimal;
@@ -19,6 +20,12 @@ public record JobDefaults(
         int maxAttempts,
         int initialBackoffSec,
         BigDecimal backoffMultiplier,
-        int timeoutSec
+        int timeoutSec,
+
+        /**
+         * Default for jobs that do not choose one. FIRE_NOW keeps M4/M5 behaviour, so upgrading
+         * to M6 changes nothing until a job opts in.
+         */
+        MisfirePolicy misfirePolicy
 ) {
 }

@@ -1,6 +1,7 @@
 package com.chronos.job.dto;
 
 import com.chronos.job.HttpMethodType;
+import com.chronos.job.MisfirePolicy;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
@@ -68,6 +69,12 @@ public record JobRequest(
 
         @Min(value = 1, message = "timeoutSec must be at least 1")
         @Max(value = 300, message = "timeoutSec must be at most 300")
-        Integer timeoutSec
+        Integer timeoutSec,
+
+        /**
+         * FIRE_NOW or SKIP. Null falls back to {@code chronos.defaults.misfire-policy}, so
+         * clients written against M3-M5 keep working unchanged.
+         */
+        MisfirePolicy misfirePolicy
 ) {
 }

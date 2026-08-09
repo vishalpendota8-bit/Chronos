@@ -43,9 +43,13 @@ public class SchedulerConfig {
         executor.setThreadNamePrefix("chronos-dispatch-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
 
-        // On shutdown, stop accepting new work but let in-flight calls finish. Without this the
-        // JVM could exit mid-request, leaving rows stuck in RUNNING for the reaper to clean up.
-        // M6 turns this into a proper graceful-shutdown story.
+        // On shutdown, stop accepting new work but let in-flight calls finish.
+        //
+        // This is the pool's own safety net, and it is not the whole story: it can stop the JVM
+        // exiting mid-request, but it knows nothing about the database rows those requests own.
+        // SchedulerLifecycle runs first (an earlier stop phase) and handles that part — it stops
+        // the node claiming, waits for the same dispatches to drain, and releases any row that
+        // did not finish. By the time this pool shuts down there is normally nothing left in it.
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
 

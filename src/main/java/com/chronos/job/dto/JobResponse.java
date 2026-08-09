@@ -3,6 +3,7 @@ package com.chronos.job.dto;
 import com.chronos.job.HttpMethodType;
 import com.chronos.job.Job;
 import com.chronos.job.JobStatus;
+import com.chronos.job.MisfirePolicy;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -36,6 +37,7 @@ public record JobResponse(
         int initialBackoffSec,
         BigDecimal backoffMultiplier,
         int timeoutSec,
+        MisfirePolicy misfirePolicy,
         Instant createdAt
 ) {
     public static JobResponse from(Job job, String cronDescription) {
@@ -56,6 +58,7 @@ public record JobResponse(
                 job.getInitialBackoffSec(),
                 job.getBackoffMultiplier(),
                 job.getTimeoutSec(),
+                job.getMisfirePolicy(),
                 job.getCreatedAt());
     }
 }

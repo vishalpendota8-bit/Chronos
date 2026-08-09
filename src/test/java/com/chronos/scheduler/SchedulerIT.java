@@ -10,6 +10,7 @@ import com.chronos.job.HttpMethodType;
 import com.chronos.job.Job;
 import com.chronos.job.JobRepository;
 import com.chronos.job.JobStatus;
+import com.chronos.job.MisfirePolicy;
 import com.chronos.support.PostgresTestBase;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -153,6 +154,7 @@ class SchedulerIT extends PostgresTestBase {
                 .initialBackoffSec(10)
                 .backoffMultiplier(new BigDecimal("2.00"))
                 .timeoutSec(30)
+                .misfirePolicy(MisfirePolicy.FIRE_NOW)
                 .build());
     }
 
@@ -324,6 +326,7 @@ class SchedulerIT extends PostgresTestBase {
                 .initialBackoffSec(10)
                 .backoffMultiplier(new BigDecimal("2.00"))
                 .timeoutSec(5)
+                .misfirePolicy(MisfirePolicy.FIRE_NOW)
                 .build());
 
         enqueuer.enqueueDueJobs();
