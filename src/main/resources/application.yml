@@ -32,6 +32,13 @@ spring:
     virtual:
       enabled: false
 
+  task:
+    scheduling:
+      # Two @Scheduled loops (enqueue and poll). The default pool of 1 would make them take
+      # turns, so a slow enqueue tick would delay claiming due work.
+      pool:
+        size: 2
+
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
@@ -66,6 +73,24 @@ chronos:
     initial-backoff-sec: 10
     backoff-multiplier: 2.0
     timeout-sec: 30
+
+  scheduler:
+    # Turned off in tests so they can step the engine manually.
+    enabled: ${CHRONOS_SCHEDULER_ENABLED:true}
+    enqueue-interval-ms: 5000
+    poll-interval-ms: 5000
+    # 50 rows per claim, per node. Small enough that a second node gets a share of a backlog
+    # rather than watching the first node take everything.
+    batch-size: 50
+    enqueue-batch-size: 100
+    connect-timeout-sec: 10
+    response-snippet-limit: 1000
+    dispatch:
+      # 16 concurrent outbound calls per node. Keep max-pool-size well under the Hikari pool
+      # (20) — every finishing dispatch needs a connection to write its result back.
+      core-pool-size: 8
+      max-pool-size: 16
+      queue-capacity: 100
 
   jobs:
     # SSRF guard. Ships DISABLED because the obvious way to try Chronos out — and the way M7's

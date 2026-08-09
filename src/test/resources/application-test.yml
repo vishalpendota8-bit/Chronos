@@ -8,6 +8,12 @@ spring:
   flyway:
     enabled: true
 
+chronos:
+  scheduler:
+    # The @Scheduled timers are off in tests. Integration tests call the enqueuer and poller
+    # directly so each step is observable, instead of racing a 5-second background tick.
+    enabled: false
+
 logging:
   level:
     org.testcontainers: WARN
